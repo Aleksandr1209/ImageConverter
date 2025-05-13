@@ -4,11 +4,8 @@ import org.example.model.ImageModel;
 import org.example.utils.ImageUtils;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
+
 
 
 public class ImageController {
@@ -18,34 +15,6 @@ public class ImageController {
         this.model = model;
     }
 
-    public void loadImage() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Open Image");
-
-        // Установка фильтров
-        String[] extensions = ImageIO.getReaderFileSuffixes();
-        fileChooser.setFileFilter(
-                new FileNameExtensionFilter("Image Files", extensions));
-
-        if (fileChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-            try {
-                File file = fileChooser.getSelectedFile();
-                BufferedImage image = ImageIO.read(file);
-
-                if (image == null) {
-                    throw new IOException("Unsupported image format");
-                }
-
-                model.setOriginalImage(image);
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(null,
-                        "Could not load image: " + e.getMessage(),
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-        }
-    }
-
     public void convertToGrayscale() {
         if (model.hasImage()) {
             BufferedImage grayImage = ImageUtils.convertToGrayscale(model.getCurrentImage());
@@ -53,9 +22,45 @@ public class ImageController {
         }
     }
 
-    public void resetImage() {
-        model.resetToOriginal();
+    public void applyLinearCorrection() {
+        if (!model.hasImage() || model.getCurrentImage() == null) {
+            System.err.println("No image loaded!");
+            return;
+        }
+
+        try {
+            BufferedImage result = ImageUtils.linearCorrection(model.getCurrentImage());
+            if (result == null) {
+                System.err.println("Linear correction returned null!");
+                return;
+            }
+            model.setCurrentImage(result);
+        } catch (Exception e) {
+            System.err.println("Error in linear correction: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
-    // Другие методы управления изображением...
+    public void applyNonlinearCorrection() {
+        if (!model.hasImage()) return;
+
+        String input = JOptionPane.showInputDialog(
+                "Enter gamma value (0.1-5.0, 1.0=no change):",
+                "1.5");
+
+        try {
+            double gamma = Double.parseDouble(input);
+            gamma = Math.max(0.1, Math.min(5.0, gamma));
+
+            BufferedImage result = ImageUtils.gammaCorrection(
+                    model.getCurrentImage(),
+                    gamma);
+            model.setCurrentImage(result);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(null,
+                    "Invalid gamma value",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
 }

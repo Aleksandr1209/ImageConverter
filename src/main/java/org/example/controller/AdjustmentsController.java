@@ -2,7 +2,6 @@ package org.example.controller;
 
 import org.example.model.ImageModel;
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class AdjustmentsController {
@@ -19,17 +18,14 @@ public class AdjustmentsController {
     public void applyAdjustments() {
         if (!model.hasImage() || model.getOriginalImage() == null) return;
 
-        // Всегда работаем с КОПИЕЙ оригинального изображения
         BufferedImage result = deepCopy(model.getOriginalImage());
 
-        // Применяем все корректировки
         if (gamma != 1.0) {
             result = applyGamma(result, gamma);
         }
 
         result = applyColorAdjustments(result, brightness, contrast, saturation);
 
-        // Устанавливаем новое изображение
         model.setCurrentImage(result);
     }
 

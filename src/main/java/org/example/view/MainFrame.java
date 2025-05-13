@@ -30,6 +30,9 @@ public class MainFrame extends JFrame {
     private JButton resetButton;
     private JButton saveButton;
     private JButton openButton;
+    private JButton grayscaleButton;
+    private JButton linearCorrectionButton;
+    private JButton nonlinearCorrectionButton;
 
 
     public MainFrame() {
@@ -69,9 +72,24 @@ public class MainFrame extends JFrame {
         openButton = new JButton("Open");
         openButton.addActionListener(e -> openImage());
 
-        JButton grayscaleButton = new JButton("Grayscale");
+        grayscaleButton = new JButton("Grayscale");
+        grayscaleButton.setEnabled(false);
         grayscaleButton.addActionListener(e -> {
             imageController.convertToGrayscale();
+            updateViews();
+        });
+
+        linearCorrectionButton = new JButton("Linear Correction");
+        linearCorrectionButton.setEnabled(false);
+        linearCorrectionButton.addActionListener(e -> {
+            imageController.applyLinearCorrection();
+            updateViews();
+        });
+
+        nonlinearCorrectionButton = new JButton("Nonlinear Correction");
+        nonlinearCorrectionButton.setEnabled(false);
+        nonlinearCorrectionButton.addActionListener(e -> {
+            imageController.applyNonlinearCorrection();
             updateViews();
         });
 
@@ -90,6 +108,9 @@ public class MainFrame extends JFrame {
         toolBar.add(openButton);
         toolBar.add(resetButton);
         toolBar.add(saveButton);
+        toolBar.add(grayscaleButton);
+        toolBar.add(linearCorrectionButton);
+        toolBar.add(nonlinearCorrectionButton);
 
         return toolBar;
     }
@@ -174,6 +195,9 @@ public class MainFrame extends JFrame {
             boolean isModified = model.isModified();
             resetButton.setEnabled(hasImage && isModified);
             saveButton.setEnabled(hasImage && isModified);
+            grayscaleButton.setEnabled(hasImage);
+            linearCorrectionButton.setEnabled(hasImage);
+            nonlinearCorrectionButton.setEnabled(hasImage);
         });
     }
 
@@ -182,29 +206,6 @@ public class MainFrame extends JFrame {
         contrastSlider.setValue(0);
         saturationSlider.setValue(0);
         gammaSlider.setValue(100);
-    }
-
-    // Оптимизированный слушатель для слайдеров
-    private class OptimizedSliderListener implements ChangeListener {
-        private final Consumer<Integer> action;
-        private int lastValue;
-
-        public OptimizedSliderListener(Consumer<Integer> action) {
-            this.action = action;
-            this.lastValue = 0;
-        }
-
-        @Override
-        public void stateChanged(ChangeEvent e) {
-            JSlider source = (JSlider) e.getSource();
-            if (!source.getValueIsAdjusting()) {
-                int newValue = source.getValue();
-                if (newValue != lastValue) {
-                    action.accept(newValue);
-                    lastValue = newValue;
-                }
-            }
-        }
     }
 
     private void saveImage() {
@@ -232,7 +233,6 @@ public class MainFrame extends JFrame {
             File fileToSave = fileChooser.getSelectedFile();
             String format = ((FileNameExtensionFilter)fileChooser.getFileFilter()).getExtensions()[0];
 
-            // Добавляем расширение, если его нет
             String fileName = fileToSave.getAbsolutePath();
             if (!fileName.toLowerCase().endsWith("." + format)) {
                 fileToSave = new File(fileName + "." + format);
@@ -259,31 +259,10 @@ public class MainFrame extends JFrame {
         }
     }
 
-    private String getFormatFromExtension(FileFilter filter, File file) {
-        // Определяем формат по выбранному фильтру
-        if (filter.getDescription().contains("JPEG")) {
-            return "jpg";
-        } else if (filter.getDescription().contains("PNG")) {
-            return "png";
-        } else if (filter.getDescription().contains("BMP")) {
-            return "bmp";
-        }
-
-        // Если формат не определен по фильтру, пробуем определить по расширению файла
-        String name = file.getName().toLowerCase();
-        if (name.endsWith(".png")) return "png";
-        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "jpg";
-        if (name.endsWith(".bmp")) return "bmp";
-
-        // По умолчанию сохраняем как JPEG
-        return "jpg";
-    }
-
     private void openImage() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Select Image");
 
-        // Установка фильтров для изображений
         fileChooser.setAcceptAllFileFilterUsed(false);
         fileChooser.addChoosableFileFilter(
                 new FileNameExtensionFilter("Image files",
@@ -294,13 +273,11 @@ public class MainFrame extends JFrame {
         if (returnValue == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
             try {
-                // Чтение изображения с проверкой на null
                 BufferedImage image = ImageIO.read(selectedFile);
                 if (image == null) {
                     throw new IOException("Unsupported image format");
                 }
 
-                // Установка изображения в модель
                 model.setOriginalImage(image);
                 adjustmentsController.resetAllAdjustments();
                 resetSlidersToDefault();
